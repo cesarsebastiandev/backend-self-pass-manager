@@ -7,4 +7,5 @@ import (
 func SyncDatabase() {
 	//Migrate the schema
 	DB.AutoMigrate(&models.User{})
+	DB.AutoMigrate(&models.Credential{})
 }

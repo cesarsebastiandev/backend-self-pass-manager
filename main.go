@@ -21,11 +21,13 @@ func main() {
 			"message": "pong",
 		})
 	})
+	//Public routes
 	r.POST("/api/register", controllers.Signup)
 	r.POST("/api/login", controllers.Login)
-	r.POST("/api/logout",controllers.Logout)
-	r.GET("/api/logout", middleware.RequireAuth, controllers.Logout)
-
+	
+	//Private routes
+	r.POST("/api/logout", middleware.RequireAuth, controllers.Logout)
 	r.GET("/api/profile", middleware.RequireAuth, controllers.Validate)
+	r.POST("/api/credentials", middleware.RequireAuth, controllers.AddCredentials)
 	r.Run() // listen and serve on 0.0.0.0:3000
 }
