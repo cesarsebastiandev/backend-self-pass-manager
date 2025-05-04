@@ -29,5 +29,11 @@ func main() {
 	r.POST("/api/logout", middleware.RequireAuth, controllers.Logout)
 	r.GET("/api/profile", middleware.RequireAuth, controllers.Validate)
 	r.POST("/api/credentials", middleware.RequireAuth, controllers.AddCredentials)
+	r.GET("/api/credentials", middleware.RequireAuth, controllers.GetAllCredentials)
+	r.GET("/api/credentials/:id", middleware.RequireAuth, controllers.GetCredentialByID)
+	r.PATCH("/api/credentials/:id", middleware.RequireAuth, controllers.UpdateCredentialByID)
+	r.DELETE("/api/credentials/:id", middleware.RequireAuth, controllers.DeleteCredentialByID)
+
+
 	r.Run() // listen and serve on 0.0.0.0:3000
 }

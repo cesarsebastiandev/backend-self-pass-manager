@@ -70,3 +70,146 @@ func AddCredentials(c *gin.Context) {
 		"message": "Record created successfully",
 	})
 }
+
+func GetAllCredentials(c *gin.Context) {
+	var credentials []models.Credential
+
+	// Retrieve all records
+	result := initialiazers.DB.Find(&credentials)
+
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to retrieve records: " + result.Error.Error(),
+		})
+		return
+	}
+
+	if len(credentials) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "No records found",
+		})
+		return
+	}
+
+	// c.JSON(http.StatusOK, gin.H{
+	// 	"data": credentials,
+	// })
+	c.JSON(http.StatusOK, credentials)
+}
+
+func UpdateCredentialByID(c *gin.Context) {
+	// Get the ID from the URL
+	id := c.Param("id")
+
+	// Find the existing credential
+	var credential models.Credential
+	if err := initialiazers.DB.First(&credential, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "Record not found",
+		})
+		return
+	}
+
+	// Bind the new data from the request body
+	var body struct {
+		Platform         string `json:"platform" binding:"omitempty,min=2,max=100"`
+		Description      string `json:"description" binding:"omitempty,min=2,max=100"`
+		Email            string `json:"email" binding:"omitempty,email,max=100"`
+		Password         string `json:"password" binding:"omitempty,min=8,max=30"`
+		PasswordToDecode string `json:"password_to_decode" binding:"omitempty,min=8,max=30"`
+	}
+	if err := c.Bind(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid input: " + err.Error(),
+		})
+		return
+	}
+
+	// Update fields if present
+	if body.Platform != "" {
+		credential.Platform = body.Platform
+	}
+	if body.Description != "" {
+		credential.Description = body.Description
+	}
+	if body.Email != "" {
+		credential.Email = body.Email
+	}
+	if body.Password != "" {
+		key := utils.DeriveKeyFromPassword(body.Password)
+		encryptedPassword, err := utils.EncryptAES(body.Password, key)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Failed to encrypt password",
+			})
+			return
+		}
+		credential.Password = encryptedPassword
+	}
+	if body.PasswordToDecode != "" {
+		hash, err := bcrypt.GenerateFromPassword([]byte(body.PasswordToDecode), 10)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Failed to hash password to decode",
+			})
+			return
+		}
+		credential.PasswordToDecode = string(hash)
+	}
+
+	// Save the updated credential
+	if err := initialiazers.DB.Save(&credential).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to update record: " + err.Error(),
+		})
+		return
+	}
+
+	// Return the updated record
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Record updated successfully",
+	})
+}
+
+func DeleteCredentialByID(c *gin.Context) {
+	// Get the ID from the URL parameter
+	id := c.Param("id")
+
+	// Check if the credential exists
+	var credential models.Credential
+	if err := initialiazers.DB.First(&credential, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "Credential not found",
+		})
+		return
+	}
+
+	// Delete the credential
+	if err := initialiazers.DB.Delete(&credential).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to delete credential",
+		})
+		return
+	}
+
+	// Return success message
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Credential deleted successfully",
+	})
+}
+
+func GetCredentialByID(c *gin.Context) {
+	// Get the ID from the URL parameter
+	id := c.Param("id")
+
+	// Check if the credential exists
+	var credential models.Credential
+	if err := initialiazers.DB.First(&credential, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "Record not found",
+		})
+		return
+	}
+	c.JSON(http.StatusOK, credential)
+
+}
