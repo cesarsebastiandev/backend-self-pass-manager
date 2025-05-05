@@ -12,15 +12,14 @@ import (
 )
 
 func AddCredentials(c *gin.Context) {
-	//Get the email/pass off request body
-
 	var body struct {
-		Platform         string `json:"platform" binding:"required,min=2,max=100"`
-		Description      string `json:"description" binding:"required,min=2,max=100"`
-		Email            string `json:"email" binding:"required,email,max=100"`
-		Password         string `json:"password" binding:"required,min=8,max=30"`
-		PasswordToDecode string `json:"password_to_decode" binding:"required,min=8,max=30"`
+		Platform    string `json:"platform" binding:"required,min=2,max=100"`
+		Description string `json:"description" binding:"required,min=2,max=100"`
+		Email       string `json:"email" binding:"required,email,max=100"`
+		Secret      string `json:"secret" binding:"required,min=8,max=100"`
+		MasterKey   string `json:"master_key" binding:"required,min=8,max=30"`
 	}
+
 	if err := c.Bind(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid input: " + err.Error(),
@@ -28,46 +27,45 @@ func AddCredentials(c *gin.Context) {
 		return
 	}
 
-	// Derive the 32-byte key from the user's password
-	key := utils.DeriveKeyFromPassword(body.Password)
+	// Derive AES key from MasterKey
+	key := utils.DeriveKeyFromPassword(body.MasterKey)
 
-	//Encrypt the password
-	encryptedPassword, err := utils.EncryptAES(body.Password, key)
+	// Encrypt the secret using the derived key
+	encryptedSecret, err := utils.EncryptAES(body.Secret, key)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to encrypt password",
+			"error": "Failed to encrypt secret",
 		})
 		return
 	}
 
-	//Hash the password to decode
-	hash, err := bcrypt.GenerateFromPassword([]byte(body.PasswordToDecode), 10)
-
+	// Hash the MasterKey using bcrypt
+	hash, err := bcrypt.GenerateFromPassword([]byte(body.MasterKey), 10)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Failed to hash the password for decoding",
-		})
-
-		return
-	}
-
-	//Insert into database and create the user
-
-	user := models.Credential{Platform: body.Platform, Description: body.Description, Email: body.Email, Password: encryptedPassword, PasswordToDecode: string(hash)}
-
-	result := initialiazers.DB.Create(&user)
-
-	if result.Error != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			// "error": "Failed to create user",
-			"error": "Failed to create user: " + result.Error.Error(),
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to hash master key",
 		})
 		return
 	}
 
-	//Respond and return a success message
+	// Save to DB
+	credential := models.Credential{
+		Platform:    body.Platform,
+		Description: body.Description,
+		Email:       body.Email,
+		Secret:      encryptedSecret,
+		MasterKey:   string(hash),
+	}
+
+	if result := initialiazers.DB.Create(&credential); result.Error != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Failed to create credential: " + result.Error.Error(),
+		})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Record created successfully",
+		"message": "Credential created successfully",
 	})
 }
 
@@ -112,11 +110,11 @@ func UpdateCredentialByID(c *gin.Context) {
 
 	// Bind the new data from the request body
 	var body struct {
-		Platform         string `json:"platform" binding:"omitempty,min=2,max=100"`
-		Description      string `json:"description" binding:"omitempty,min=2,max=100"`
-		Email            string `json:"email" binding:"omitempty,email,max=100"`
-		Password         string `json:"password" binding:"omitempty,min=8,max=30"`
-		PasswordToDecode string `json:"password_to_decode" binding:"omitempty,min=8,max=30"`
+		Platform    string `json:"platform" binding:"omitempty,min=2,max=100"`
+		Description string `json:"description" binding:"omitempty,min=2,max=100"`
+		Email       string `json:"email" binding:"omitempty,email,max=100"`
+		Secret      string `json:"secret" binding:"omitempty,min=8,max=30"`
+		MasterKey   string `json:"master_key" binding:"omitempty,min=8,max=30"`
 	}
 	if err := c.Bind(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -135,26 +133,26 @@ func UpdateCredentialByID(c *gin.Context) {
 	if body.Email != "" {
 		credential.Email = body.Email
 	}
-	if body.Password != "" {
-		key := utils.DeriveKeyFromPassword(body.Password)
-		encryptedPassword, err := utils.EncryptAES(body.Password, key)
+	if body.Secret != "" {
+		key := utils.DeriveKeyFromPassword(body.Secret)
+		encryptedPassword, err := utils.EncryptAES(body.Secret, key)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Failed to encrypt password",
 			})
 			return
 		}
-		credential.Password = encryptedPassword
+		credential.Secret = encryptedPassword
 	}
-	if body.PasswordToDecode != "" {
-		hash, err := bcrypt.GenerateFromPassword([]byte(body.PasswordToDecode), 10)
+	if body.MasterKey != "" {
+		hash, err := bcrypt.GenerateFromPassword([]byte(body.MasterKey), 10)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Failed to hash password to decode",
 			})
 			return
 		}
-		credential.PasswordToDecode = string(hash)
+		credential.MasterKey = string(hash)
 	}
 
 	// Save the updated credential
@@ -212,4 +210,52 @@ func GetCredentialByID(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, credential)
 
+}
+
+func GetPasswordDecryptByID(c *gin.Context) {
+	// Get the ID from the URL parameter
+	id := c.Param("id")
+
+	// Find the credential by ID
+	var credential models.Credential
+	if err := initialiazers.DB.First(&credential, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "Record not found",
+		})
+		return
+	}
+
+	// Get the password to decode from request body
+	var body struct {
+		MasterKey string `json:"master_key" binding:"required"`
+	}
+	if err := c.BindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Masterkey is required to decrypt",
+		})
+		return
+	}
+
+	// Compare hashed password with provided one
+	err := bcrypt.CompareHashAndPassword([]byte(credential.MasterKey), []byte(body.MasterKey))
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "Invalid decryption password",
+		})
+		return
+	}
+
+	// Decrypt password using the provided key
+	decryptedPassword, err := utils.DecryptAES(credential.Secret, body.MasterKey)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to decrypt password",
+		})
+		return
+	}
+
+	// Return the decrypted password
+	c.JSON(http.StatusOK, gin.H{
+		"decrypted_password": decryptedPassword,
+	})
 }

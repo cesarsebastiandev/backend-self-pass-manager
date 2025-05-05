@@ -38,6 +38,7 @@ func Signup(c *gin.Context) {
 
 		return
 	}
+	
 
 	//Insert into database and create the user
 

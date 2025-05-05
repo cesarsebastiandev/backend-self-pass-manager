@@ -33,6 +33,8 @@ func main() {
 	r.GET("/api/credentials/:id", middleware.RequireAuth, controllers.GetCredentialByID)
 	r.PATCH("/api/credentials/:id", middleware.RequireAuth, controllers.UpdateCredentialByID)
 	r.DELETE("/api/credentials/:id", middleware.RequireAuth, controllers.DeleteCredentialByID)
+	r.POST("/api/credentials/decrypt/:id", middleware.RequireAuth, controllers.GetPasswordDecryptByID)
+
 
 
 	r.Run() // listen and serve on 0.0.0.0:3000

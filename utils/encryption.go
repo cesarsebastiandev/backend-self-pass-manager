@@ -27,13 +27,7 @@ func EncryptAES(plaintext string, key []byte) (string, error) {
 	return base64.StdEncoding.EncodeToString(ciphertext), nil
 }
 
-func DeriveKeyFromPassword(password string) []byte {
-	// Perform SHA-256 hash on the password to guarantee a 32-byte length
-	hash := sha256.Sum256([]byte(password))
-	return hash[:] // Return 32 bytes suitable for AES-256
-}
-
-func Decrypt(encrypted string, password string) (string, error) {
+func DecryptAES(encrypted string, password string) (string, error) {
 	// Derive a 32-byte key from the password
 	key := DeriveKeyFromPassword(password)
 
@@ -69,4 +63,10 @@ func Decrypt(encrypted string, password string) (string, error) {
 	}
 
 	return string(plaintext), nil
+}
+
+func DeriveKeyFromPassword(password string) []byte {
+	// Perform SHA-256 hash on the password to guarantee a 32-byte length
+	hash := sha256.Sum256([]byte(password))
+	return hash[:] // Return 32 bytes suitable for AES-256
 }
