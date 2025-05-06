@@ -59,13 +59,13 @@ func AddCredentials(c *gin.Context) {
 
 	if result := initialiazers.DB.Create(&credential); result.Error != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Failed to create credential: " + result.Error.Error(),
+			"error": "Failed to create record: " + result.Error.Error(),
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Credential created successfully",
+		"message": "Record created successfully",
 	})
 }
 
@@ -177,7 +177,7 @@ func DeleteCredentialByID(c *gin.Context) {
 	var credential models.Credential
 	if err := initialiazers.DB.First(&credential, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Credential not found",
+			"error": "Record not found",
 		})
 		return
 	}
@@ -185,14 +185,14 @@ func DeleteCredentialByID(c *gin.Context) {
 	// Delete the credential
 	if err := initialiazers.DB.Delete(&credential).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to delete credential",
+			"error": "Failed to delete record",
 		})
 		return
 	}
 
 	// Return success message
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Credential deleted successfully",
+		"message": "Record deleted successfully",
 	})
 }
 
@@ -258,4 +258,20 @@ func GetPasswordDecryptByID(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"decrypted_password": decryptedPassword,
 	})
+}
+
+func GetEmailByID(c *gin.Context) {
+	// Get the ID from the URL parameter
+	id := c.Param("id")
+
+	// Check if the credential exists
+	var credential models.Credential
+	if err := initialiazers.DB.First(&credential, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "Record not found",
+		})
+		return
+	}
+	c.JSON(http.StatusOK, credential.Email)
+
 }
