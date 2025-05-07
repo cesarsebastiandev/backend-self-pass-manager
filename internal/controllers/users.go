@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	"github.com/cesarsebastiandev/backend-self-pass-manager/initialiazers"
-	"github.com/cesarsebastiandev/backend-self-pass-manager/models"
+	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/initialiazers"
+	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/models"
 	"net/http"
 	"os"
 	"time"

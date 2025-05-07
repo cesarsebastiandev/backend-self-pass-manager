@@ -1,7 +1,7 @@
 package initialiazers
 
 import (
-	"github.com/cesarsebastiandev/backend-self-pass-manager/models"
+	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/models"
 )
 
 func SyncDatabase() {

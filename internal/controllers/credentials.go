@@ -3,9 +3,9 @@ package controllers
 import (
 	"net/http"
 
-	"github.com/cesarsebastiandev/backend-self-pass-manager/initialiazers"
-	"github.com/cesarsebastiandev/backend-self-pass-manager/models"
-	"github.com/cesarsebastiandev/backend-self-pass-manager/utils"
+	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/initialiazers"
+	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/models"
+	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/utils"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"

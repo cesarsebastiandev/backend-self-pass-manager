@@ -1,8 +1,8 @@
 package routes
 
 import (
-	"github.com/cesarsebastiandev/backend-self-pass-manager/controllers"
-	"github.com/cesarsebastiandev/backend-self-pass-manager/middlewares"
+	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/controllers"
+	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/middlewares"
 	"github.com/gin-gonic/gin"
 )
 
