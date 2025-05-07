@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/cors"
 	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/initialiazers"
 	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/routes"
 
@@ -23,5 +24,9 @@ func main() {
 
 	//It loads all routes
 	routes.SetupAllRoutes(r)
+
+	//It loads cors config
+	r.Use(cors.CORSConfig())
+
 	r.Run() // listen and serve on 0.0.0.0:3000
 }
