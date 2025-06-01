@@ -1,0 +1,17 @@
+basePath: /api/v1
+host: localhost:3000
+info:
+  contact:
+    email: cesarsebastian.dev@email.com
+    name: Ing. Cesar Sebastian
+    url: https://github.com/cesarsebastiandev
+  description: This is a restful API
+  title: Documenting API
+  version: "1"
+paths: {}
+securityDefinitions:
+  bearerToken:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

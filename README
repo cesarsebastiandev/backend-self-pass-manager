@@ -3,3 +3,6 @@ CompileDaemon -command="./backend-self-pass-manager/cmd"
 
 //When the main.go file is in the cmd folder
 CompileDaemon -build="go build -o backend-self-pass-manager ./cmd" -command="./backend-self-pass-manager"
+
+//This package helps to document my restapi
+go install github.com/swaggo/swag/cmd/swag@latest

@@ -1,0 +1,23 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "This is a restful API",
+        "title": "Documenting API",
+        "contact": {
+            "name": "Ing. Cesar Sebastian",
+            "url": "https://github.com/cesarsebastiandev",
+            "email": "cesarsebastian.dev@email.com"
+        },
+        "version": "1"
+    },
+    "host": "localhost:3000",
+    "basePath": "/api/v1",
+    "paths": {},
+    "securityDefinitions": {
+        "bearerToken": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}
