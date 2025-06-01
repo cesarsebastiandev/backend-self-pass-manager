@@ -14,18 +14,23 @@ func SetupAllRoutes(r *gin.Engine) {
 		})
 	})
 
-	//Public routes
-	r.POST("/api/register", controllers.Signup)
-	r.POST("/api/login", controllers.Login)
+	api := r.Group("/api/v1")
+	{
+		//Public routes
+		api.POST("/register", controllers.Signup)
+		api.POST("/login", controllers.Login)
 
-	//Private routes
-	r.POST("/api/logout", middlewares.RequireAuth, controllers.Logout)
-	r.GET("/api/profile", middlewares.RequireAuth, controllers.Validate)
-	r.POST("/api/credentials", middlewares.RequireAuth, controllers.AddCredentials)
-	r.GET("/api/credentials", middlewares.RequireAuth, controllers.GetAllCredentials)
-	r.GET("/api/credentials/:id", middlewares.RequireAuth, controllers.GetCredentialByID)
-	r.PATCH("/api/credentials/:id", middlewares.RequireAuth, controllers.UpdateCredentialByID)
-	r.DELETE("/api/credentials/:id", middlewares.RequireAuth, controllers.DeleteCredentialByID)
-	r.POST("/api/credentials/decrypt/:id", middlewares.RequireAuth, controllers.GetPasswordDecryptByID)
-	r.GET("/api/credentials/email/:id", middlewares.RequireAuth, controllers.GetEmailByID)
+		//Private routes
+		api.POST("/logout", middlewares.RequireAuth, controllers.Logout)
+		api.GET("/profile", middlewares.RequireAuth, controllers.Validate)
+		api.POST("/credentials", middlewares.RequireAuth, controllers.AddCredentials)
+		api.GET("/credentials", middlewares.RequireAuth, controllers.GetAllCredentials)
+		api.GET("/credentials/:id", middlewares.RequireAuth, controllers.GetCredentialByID)
+		api.PATCH("/credentials/:id", middlewares.RequireAuth, controllers.UpdateCredentialByID)
+		api.DELETE("/credentials/:id", middlewares.RequireAuth, controllers.DeleteCredentialByID)
+		api.POST("/credentials/decrypt/:id", middlewares.RequireAuth, controllers.GetPasswordDecryptByID)
+		api.GET("/credentials/email/:id", middlewares.RequireAuth, controllers.GetEmailByID)
+
+	}
+
 }
