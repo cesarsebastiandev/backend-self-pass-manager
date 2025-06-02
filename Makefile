@@ -5,3 +5,5 @@ run:
 
 swagger:
 	swag init --generalInfo cmd/main.go --output docs
+
+

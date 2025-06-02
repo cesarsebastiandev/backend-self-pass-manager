@@ -19,17 +19,20 @@ func init() {
 	initialiazers.SyncDatabase()
 }
 
-//@title Documenting API
+//@title Backend Self Pass Manager API
 //@version 1
-//@description This is a restful API
+//@description RESTful API for managing passwords securely in Backend Self Pass Manager project.
 
-// @contact.name Ing. Cesar Sebastian
+// @contact.name Eng. Cesar Sebastian
 // @contact.url https://github.com/cesarsebastiandev
 // @contact.email cesarsebastian.dev@email.com
 
 // @securityDefinitions.apikey bearerToken
 // @in header
 // @name Authorization
+
+// @license.name  MIT
+// @license.url   https://opensource.org/licenses/MIT
 
 // @host localhost:3000
 // @BasePath /api/v1

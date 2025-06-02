@@ -6,19 +6,25 @@ import (
 	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/initialiazers"
 	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/models"
 	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/utils"
+	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/validations"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 )
 
+// AddCredentials godoc
+// @Summary      Add new credential
+// @Description  Adds a new credential with encrypted secret and hashed master key
+// @Tags         Credentials
+// @Accept       json
+// @Produce      json
+// @Param        credential  body     validations.CredentialRequest true "Credential input"
+// @Success      200 {object} models.MessageResponse "Record created successfully"
+// @Failure      400 {object} models.ErrorResponse "Invalid input or Failed to create record"
+// @Failure      500 {object} models.ErrorResponse "Failed to encrypt secret or Failed to hash master key"
+// @Router       /credentials [post]
 func AddCredentials(c *gin.Context) {
-	var body struct {
-		Platform    string `json:"platform" binding:"required,min=2,max=100"`
-		Description string `json:"description" binding:"required,min=2,max=100"`
-		Email       string `json:"email" binding:"required,email,max=100"`
-		Secret      string `json:"secret" binding:"required,min=8,max=100"`
-		MasterKey   string `json:"master_key" binding:"required,min=8,max=30"`
-	}
+	var body validations.CredentialRequest
 
 	if err := c.Bind(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -69,6 +75,14 @@ func AddCredentials(c *gin.Context) {
 	})
 }
 
+// GetAllCredentials godoc
+// @Summary      Return list of all credentials
+// @Description  Return list of all credentials from the database
+// @Tags         credentials
+// @Produce      json
+// @Success      200  {array}  models.Credential
+// @Failure      500  {object}  models.HTTPError
+// @Router       /credentials [get]
 func GetAllCredentials(c *gin.Context) {
 	var credentials []models.Credential
 
@@ -95,6 +109,19 @@ func GetAllCredentials(c *gin.Context) {
 	c.JSON(http.StatusOK, credentials)
 }
 
+// UpdateCredentialByID godoc
+// @Summary      Update a credential by ID
+// @Description  Update fields of an existing credential; only provided fields will be updated
+// @Tags         Credentials
+// @Accept       json
+// @Produce      json
+// @Param        id          path      int                               true  "Credential ID"
+// @Param        credential  body      validations.CredentialRequest false "Fields to update"
+// @Success      200 {object} models.MessageResponse "Record updated successfully"
+// @Failure      400 {object} models.ErrorResponse   "Invalid input"
+// @Failure      404 {object} models.ErrorResponse   "Record not found"
+// @Failure      500 {object} models.ErrorResponse   "Failed to encrypt password or Failed to update record"
+// @Router       /credentials/{id} [patch]
 func UpdateCredentialByID(c *gin.Context) {
 	// Get the ID from the URL
 	id := c.Param("id")
@@ -109,13 +136,7 @@ func UpdateCredentialByID(c *gin.Context) {
 	}
 
 	// Bind the new data from the request body
-	var body struct {
-		Platform    string `json:"platform" binding:"omitempty,min=2,max=100"`
-		Description string `json:"description" binding:"omitempty,min=2,max=100"`
-		Email       string `json:"email" binding:"omitempty,email,max=100"`
-		Secret      string `json:"secret" binding:"omitempty,min=8,max=30"`
-		MasterKey   string `json:"master_key" binding:"omitempty,min=8,max=30"`
-	}
+	var body validations.CredentialRequest
 	if err := c.Bind(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid input: " + err.Error(),
@@ -169,6 +190,16 @@ func UpdateCredentialByID(c *gin.Context) {
 	})
 }
 
+// DeleteCredentialByID godoc
+// @Summary      Delete a credential by ID
+// @Description  Deletes the credential record identified by its ID
+// @Tags         Credentials
+// @Produce      json
+// @Param        id   path      int  true  "Credential ID"
+// @Success      200  {object}  models.MessageResponse
+// @Failure      404  {object}  models.ErrorResponse
+// @Failure      500  {object}  models.ErrorResponse
+// @Router       /credentials/{id} [delete]
 func DeleteCredentialByID(c *gin.Context) {
 	// Get the ID from the URL parameter
 	id := c.Param("id")
@@ -196,6 +227,15 @@ func DeleteCredentialByID(c *gin.Context) {
 	})
 }
 
+// GetCredentialByID godoc
+// @Summary      Get a credential by ID
+// @Description  Retrieves a single credential record by its ID
+// @Tags         Credentials
+// @Produce      json
+// @Param        id   path      int  true  "Credential ID"
+// @Success      200  {object}  models.Credential
+// @Failure      404  {object}  models.ErrorResponse
+// @Router       /credentials/{id} [get]
 func GetCredentialByID(c *gin.Context) {
 	// Get the ID from the URL parameter
 	id := c.Param("id")
@@ -212,6 +252,21 @@ func GetCredentialByID(c *gin.Context) {
 
 }
 
+// GetPasswordDecryptByID godoc
+// @Summary      Decrypt password by credential ID
+// @Description  Decrypts the stored secret password of a credential using the provided master key
+// @Tags         Credentials
+// @Accept       json
+// @Produce      json
+// @Param        id          path      int                  true  "Credential ID"
+// @Param        master_key  body     validations.MasterKeyRequest true "Master key to decrypt the password"
+
+// @Success      200         {object}  models.DecryptResponse
+// @Failure      400         {object}  models.ErrorResponse "Masterkey is required to decrypt"
+// @Failure      401         {object}  models.ErrorResponse "Invalid decryption password"
+// @Failure      404         {object}  models.ErrorResponse "Record not found"
+// @Failure      500         {object}  models.ErrorResponse "Failed to decrypt password"
+// @Router       /credentials/decrypt/{id} [post]
 func GetPasswordDecryptByID(c *gin.Context) {
 	// Get the ID from the URL parameter
 	id := c.Param("id")
@@ -259,6 +314,17 @@ func GetPasswordDecryptByID(c *gin.Context) {
 		"decrypted_password": decryptedPassword,
 	})
 }
+
+
+// GetEmailByID godoc
+// @Summary      Get email by credential ID
+// @Description  Retrieves the email associated with a credential by its ID
+// @Tags         Credentials
+// @Produce      json
+// @Param        id   path      int  true  "Credential ID"
+// @Success      200  {object}  models.EmailResponse
+// @Failure      404  {object}  models.ErrorResponse
+// @Router       /credentials/email/{id} [get]
 
 func GetEmailByID(c *gin.Context) {
 	// Get the ID from the URL parameter
