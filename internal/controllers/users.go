@@ -1,26 +1,34 @@
 package controllers
 
 import (
-	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/initialiazers"
-	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/models"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/initialiazers"
+	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/models"
+	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/validations"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
+// Signup godoc
+// @Summary      Register a new user
+// @Description  Creates a new user with hashed password
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        user  body     validations.SignUpRequest true "User created successfully"
+// @Success      200 {object} models.MessageResponse "User created successfully"
+// @Failure      400 {object} models.ErrorResponse "Invalid input or Failed to create user"
+// @Router       /signup [post]
 func Signup(c *gin.Context) {
 	//Get the email/pass off request body
 
-	var body struct {
-		Name     string `json:"name" binding:"required,min=2,max=100"`
-		Lastname string `json:"lastname" binding:"required,min=2,max=100"`
-		Email    string `json:"email" binding:"required,email"`
-		Password string `json:"password" binding:"required,min=8"`
-	}
+	var body validations.SignUpRequest
+
 	if err := c.Bind(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid input: " + err.Error(),
@@ -38,7 +46,6 @@ func Signup(c *gin.Context) {
 
 		return
 	}
-	
 
 	//Insert into database and create the user
 
@@ -60,12 +67,20 @@ func Signup(c *gin.Context) {
 	})
 }
 
+// Login godoc
+// @Summary      Login a user
+// @Description  Authenticates a user and returns a JWT token in a secure cookie
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        credentials  body     validations.LoginRequest true "Login credentials"
+// @Success      200 {object} models.MessageResponse "Token generated successfully"
+// @Failure      400 {object} models.ErrorResponse "Invalid email or password"
+// @Router       /login [post]
 func Login(c *gin.Context) {
 	//Get the email/pass off request body
-	var body struct {
-		Email    string `json:"email" binding:"required,email"`
-		Password string `json:"password" binding:"required,min=8"`
-	}
+	var body validations.LoginRequest
+
 	if err := c.Bind(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid input: " + err.Error(),
@@ -113,19 +128,37 @@ func Login(c *gin.Context) {
 
 	//Send it back
 	c.JSON(http.StatusOK, gin.H{
-		"token": "It was generated successfully",
+		"token": "Token generated successfully",
 	})
 }
 
+// Validate godoc
+// @Summary      Validate authentication
+// @Description  Checks if the user is authenticated and returns user info
+// @Tags         Auth
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Success      200 {object} models.MessageResponse "I'm logged in"
+// @Failure      401 {object} models.ErrorResponse "Unauthorized"
+// @Router       /profile [get]
 func Validate(c *gin.Context) {
 	user, _ := c.Get("user")
 	c.JSON(http.StatusOK, gin.H{
-		"message":    "I'm logged in",
-		"info": user,
+		"message": "I'm logged in",
+		"info":    user,
 	})
 
 }
 
+// Logout godoc
+// @Summary      Logout a user
+// @Description  Deletes the authentication token cookie to log out the user
+// @Tags         Auth
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Success      200 {object} models.MessageResponse "Successfully logged out"
+// @Failure      401 {object} models.ErrorResponse "Unauthorized"
+// @Router       /logout [post]
 func Logout(c *gin.Context) {
 	token, err := c.Cookie("token")
 	if err != nil || token == "" {

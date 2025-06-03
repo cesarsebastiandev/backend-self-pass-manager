@@ -65,6 +65,38 @@ definitions:
     - platform
     - secret
     type: object
+  validations.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 8
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  validations.SignUpRequest:
+    properties:
+      email:
+        type: string
+      lastname:
+        maxLength: 100
+        minLength: 2
+        type: string
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      password:
+        minLength: 8
+        type: string
+    required:
+    - email
+    - lastname
+    - name
+    - password
+    type: object
 host: localhost:3000
 info:
   contact:
@@ -97,7 +129,7 @@ paths:
             $ref: '#/definitions/models.HTTPError'
       summary: Return list of all credentials
       tags:
-      - credentials
+      - Credentials
     post:
       consumes:
       - application/json
@@ -237,6 +269,96 @@ paths:
           description: Failed to decrypt password
           schema:
             $ref: '#/definitions/models.ErrorResponse'
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates a user and returns a JWT token in a secure cookie
+      parameters:
+      - description: Login credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/validations.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Token generated successfully
+          schema:
+            $ref: '#/definitions/models.MessageResponse'
+        "400":
+          description: Invalid email or password
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Login a user
+      tags:
+      - Auth
+  /logout:
+    post:
+      description: Deletes the authentication token cookie to log out the user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully logged out
+          schema:
+            $ref: '#/definitions/models.MessageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Logout a user
+      tags:
+      - Auth
+  /profile:
+    get:
+      description: Checks if the user is authenticated and returns user info
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: I'm logged in
+          schema:
+            $ref: '#/definitions/models.MessageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Validate authentication
+      tags:
+      - Auth
+  /signup:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user with hashed password
+      parameters:
+      - description: User created successfully
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/validations.SignUpRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User created successfully
+          schema:
+            $ref: '#/definitions/models.MessageResponse'
+        "400":
+          description: Invalid input or Failed to create user
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Register a new user
+      tags:
+      - Auth
 securityDefinitions:
   bearerToken:
     in: header

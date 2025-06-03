@@ -78,7 +78,7 @@ func AddCredentials(c *gin.Context) {
 // GetAllCredentials godoc
 // @Summary      Return list of all credentials
 // @Description  Return list of all credentials from the database
-// @Tags         credentials
+// @Tags         Credentials
 // @Produce      json
 // @Success      200  {array}  models.Credential
 // @Failure      500  {object}  models.HTTPError
