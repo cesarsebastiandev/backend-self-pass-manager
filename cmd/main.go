@@ -16,7 +16,6 @@ import (
 func init() {
 	initialiazers.LoadEnvVariables()
 	initialiazers.ConnectToDb()
-	initialiazers.SyncDatabase()
 }
 
 //@title Backend Self Pass Manager API

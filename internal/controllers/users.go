@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"net/http"
 	"os"
 	"time"
@@ -8,6 +9,7 @@ import (
 	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/initialiazers"
 	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/models"
 	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/validations"
+	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -24,47 +26,53 @@ import (
 // @Success      200 {object} models.MessageResponse "User created successfully"
 // @Failure      400 {object} models.ErrorResponse "Invalid input or Failed to create user"
 // @Router       /signup [post]
+
 func Signup(c *gin.Context) {
-	//Get the email/pass off request body
+	//Get the all data off request body
 
 	var body validations.SignUpRequest
 
 	if err := c.Bind(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid input: " + err.Error(),
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input: " + err.Error()})
 		return
 	}
-
 	//Hash the password
 	hash, err := bcrypt.GenerateFromPassword([]byte(body.Password), 10)
-
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Failed to hash the password",
-		})
-
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash the password"})
 		return
 	}
-
 	//Insert into database and create the user
+	user := models.User{
+		Name:      body.Name,
+		Lastname:  body.Lastname,
+		Email:     body.Email,
+		Password:  string(hash),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
 
-	user := models.User{Name: body.Name, Lastname: body.Lastname, Email: body.Email, Password: string(hash)}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
-	result := initialiazers.DB.Create(&user)
-
-	if result.Error != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			// "error": "Failed to create user",
-			"error": "Failed to create user: " + result.Error.Error(),
-		})
+	// Check if user already exists
+	count, err := initialiazers.UserCollection.CountDocuments(ctx, bson.M{"email": user.Email})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+		return
+	}
+	if count > 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User already exists"})
 		return
 	}
 
-	//Respond and return a success message
-	c.JSON(http.StatusOK, gin.H{
-		"message": "User created successfully",
-	})
+	_, err = initialiazers.UserCollection.InsertOne(ctx, user)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "User created successfully"})
 }
 
 // Login godoc
@@ -82,54 +90,43 @@ func Login(c *gin.Context) {
 	var body validations.LoginRequest
 
 	if err := c.Bind(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid input: " + err.Error(),
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input: " + err.Error()})
 		return
 	}
-
 	//Look up requested body
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	var user models.User
-	initialiazers.DB.First(&user, "email = ?", body.Email)
-	if user.ID == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid email or password",
-		})
+	err := initialiazers.UserCollection.FindOne(ctx, bson.M{"email": body.Email}).Decode(&user)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid email or password"})
 		return
 	}
 
 	//Compare  sent in  pass with saved user pass hash
-	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(body.Password))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid email or password",
-		})
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(body.Password)); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid email or password"})
 		return
 	}
-	//Generate a jwt
+
+	// Generate JWT
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": user.ID,
-		"exp": time.Now().Add(time.Hour * 24 * 30).Unix(),
+		"sub": user.ID.Hex(),
+		"exp": time.Now().Add(30 * 24 * time.Hour).Unix(),
 	})
 
 	// Sign and get the complete encoded token as a string using the secret
 	tokenString, err := token.SignedString([]byte(os.Getenv("SECRET")))
-
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Failed to create token",
-		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create token"})
 		return
 	}
-
 	//Cookie config
 	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie("token", tokenString, 30*24*30, "/", "", true, true)
+	c.SetCookie("token", tokenString, 30*24*60*60, "/", "", true, true)
 
-	//Send it back
-	c.JSON(http.StatusOK, gin.H{
-		"token": "Token generated successfully",
-	})
+	c.JSON(http.StatusOK, gin.H{"token": "Token generated successfully"})
 }
 
 // Validate godoc

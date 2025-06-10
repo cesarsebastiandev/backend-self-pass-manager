@@ -1,23 +1,37 @@
 package initialiazers
 
 import (
-	"fmt"
+	"log"
 	"os"
 
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
-var DB *gorm.DB
+var (
+	UserCollection       *mongo.Collection
+	CredentialCollection *mongo.Collection
+)
 
 func ConnectToDb() {
-	var err error
-	dsn := os.Getenv("DB")
-	DB, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
-
-	if err != nil {
-		panic("Failed to connect DB")
-	} else {
-		fmt.Println("Connected to DB")
+	mongoURI := os.Getenv("MONGO_URI")
+	if mongoURI == "" {
+		log.Fatal("MONGO_URI is not set in environment variables")
 	}
+
+	dbName := os.Getenv("MONGO_DB_NAME")
+	if dbName == "" {
+		log.Fatal("MONGO_DB_NAME is not set in environment variables")
+	}
+
+	client, err := ConnectClient(mongoURI)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	database := client.Database(dbName)
+
+	// Retrieve collections from the database; will be assigned to global variables later.
+	UserCollection = database.Collection("users")
+	CredentialCollection = database.Collection("credentials")
+
 }

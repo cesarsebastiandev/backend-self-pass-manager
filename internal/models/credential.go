@@ -2,26 +2,19 @@ package models
 
 import (
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// type Credential struct {
-// 	gorm.Model
-// 	Platform    string `gorm:"not null"`
-// 	Description string `gorm:"not null"`
-// 	Email       string `gorm:"unique"`
-// 	Secret      string `json:"-"`
-// 	MasterKey   string `json:"-"`
-// }
-
 type Credential struct {
-	ID        uint       `json:"id" gorm:"primaryKey"`
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
-	DeletedAt *time.Time `json:"deleted_at,omitempty" gorm:"index"`
+	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	CreatedAt time.Time          `bson:"created_at" json:"created_at"`
+	UpdatedAt time.Time          `bson:"updated_at" json:"updated_at"`
+	DeletedAt *time.Time         `bson:"deleted_at,omitempty" json:"deleted_at,omitempty"`
 
-	Platform    string `json:"platform" gorm:"not null"`
-	Description string `json:"description" gorm:"not null"`
-	Email       string `json:"email"`
-	Secret      string `json:"-"`
-	MasterKey   string `json:"-"`
+	Platform    string `bson:"platform" json:"platform"`
+	Description string `bson:"description" json:"description"`
+	Email       string `bson:"email" json:"email"`
+	Secret      string `bson:"secret" json:"-"`
+	MasterKey   string `bson:"master_key" json:"-"`
 }
