@@ -8,3 +8,7 @@ CompileDaemon -build="go build -o backend-self-pass-manager ./cmd" -command="./b
 go install github.com/swaggo/swag/cmd/swag@latest
 "github.com/swaggo/files"
 "github.com/swaggo/gin-swagger"
+
+
+//To connect to the client like DATAGRIP
+Write admin instead of database name

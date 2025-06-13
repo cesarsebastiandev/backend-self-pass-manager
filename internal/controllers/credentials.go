@@ -1,12 +1,16 @@
 package controllers
 
 import (
+	"context"
 	"net/http"
+	"time"
 
 	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/initialiazers"
 	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/models"
 	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/utils"
 	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/validations"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
@@ -54,18 +58,22 @@ func AddCredentials(c *gin.Context) {
 		return
 	}
 
-	// Save to DB
+	// Build the credential model
 	credential := models.Credential{
 		Platform:    body.Platform,
 		Description: body.Description,
 		Email:       body.Email,
 		Secret:      encryptedSecret,
 		MasterKey:   string(hash),
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
 	}
 
-	if result := initialiazers.DB.Create(&credential); result.Error != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Failed to create record: " + result.Error.Error(),
+	// Save to MongoDB
+	_, err = initialiazers.CredentialCollection.InsertOne(context.TODO(), credential)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to create record: " + err.Error(),
 		})
 		return
 	}
@@ -86,16 +94,29 @@ func AddCredentials(c *gin.Context) {
 func GetAllCredentials(c *gin.Context) {
 	var credentials []models.Credential
 
-	// Retrieve all records
-	result := initialiazers.DB.Find(&credentials)
-
-	if result.Error != nil {
+	// Find all credentials in MongoDB
+	cursor, err := initialiazers.CredentialCollection.Find(context.TODO(), bson.M{})
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to retrieve records: " + result.Error.Error(),
+			"error": "Failed to retrieve records: " + err.Error(),
 		})
 		return
 	}
+	defer cursor.Close(context.TODO())
 
+	// Iterate over cursor and decode each document into a Credential
+	for cursor.Next(context.TODO()) {
+		var credential models.Credential
+		if err := cursor.Decode(&credential); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Error decoding credential: " + err.Error(),
+			})
+			return
+		}
+		credentials = append(credentials, credential)
+	}
+
+	// Check if no records found
 	if len(credentials) == 0 {
 		c.JSON(http.StatusOK, gin.H{
 			"message": "No records found",
@@ -103,9 +124,7 @@ func GetAllCredentials(c *gin.Context) {
 		return
 	}
 
-	// c.JSON(http.StatusOK, gin.H{
-	// 	"data": credentials,
-	// })
+	// Return the credentials
 	c.JSON(http.StatusOK, credentials)
 }
 
@@ -124,14 +143,18 @@ func GetAllCredentials(c *gin.Context) {
 // @Router       /credentials/{id} [patch]
 func UpdateCredentialByID(c *gin.Context) {
 	// Get the ID from the URL
-	id := c.Param("id")
+	idParam := c.Param("id")
+	objectID, err := primitive.ObjectIDFromHex(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
 
 	// Find the existing credential
-	var credential models.Credential
-	if err := initialiazers.DB.First(&credential, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Record not found",
-		})
+	var existingCredential models.Credential
+	err = initialiazers.CredentialCollection.FindOne(context.TODO(), bson.M{"_id": objectID}).Decode(&existingCredential)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Record not found"})
 		return
 	}
 
@@ -144,18 +167,19 @@ func UpdateCredentialByID(c *gin.Context) {
 		return
 	}
 
-	// Update fields if present
+	// Prepare fields to update
+	updateFields := bson.M{}
 	if body.Platform != "" {
-		credential.Platform = body.Platform
+		updateFields["platform"] = body.Platform
 	}
 	if body.Description != "" {
-		credential.Description = body.Description
+		updateFields["description"] = body.Description
 	}
 	if body.Email != "" {
-		credential.Email = body.Email
+		updateFields["email"] = body.Email
 	}
 	if body.Secret != "" {
-		key := utils.DeriveKeyFromPassword(body.Secret)
+		key := utils.DeriveKeyFromPassword(body.MasterKey)
 		encryptedPassword, err := utils.EncryptAES(body.Secret, key)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -163,28 +187,35 @@ func UpdateCredentialByID(c *gin.Context) {
 			})
 			return
 		}
-		credential.Secret = encryptedPassword
+		updateFields["secret"] = encryptedPassword
 	}
 	if body.MasterKey != "" {
 		hash, err := bcrypt.GenerateFromPassword([]byte(body.MasterKey), 10)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Failed to hash password to decode",
+				"error": "Failed to hash master key",
 			})
 			return
 		}
-		credential.MasterKey = string(hash)
+		updateFields["master_key"] = string(hash)
 	}
 
-	// Save the updated credential
-	if err := initialiazers.DB.Save(&credential).Error; err != nil {
+	// Always update UpdatedAt timestamp
+	updateFields["updated_at"] = time.Now()
+
+	// Perform the update
+	_, err = initialiazers.CredentialCollection.UpdateOne(
+		context.TODO(),
+		bson.M{"_id": objectID},
+		bson.M{"$set": updateFields},
+	)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to update record: " + err.Error(),
 		})
 		return
 	}
 
-	// Return the updated record
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Record updated successfully",
 	})
@@ -202,21 +233,30 @@ func UpdateCredentialByID(c *gin.Context) {
 // @Router       /credentials/{id} [delete]
 func DeleteCredentialByID(c *gin.Context) {
 	// Get the ID from the URL parameter
-	id := c.Param("id")
+	idParam := c.Param("id")
 
-	// Check if the credential exists
-	var credential models.Credential
-	if err := initialiazers.DB.First(&credential, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Record not found",
+	// Convert string ID to ObjectID
+	objectID, err := primitive.ObjectIDFromHex(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid ID format",
 		})
 		return
 	}
 
-	// Delete the credential
-	if err := initialiazers.DB.Delete(&credential).Error; err != nil {
+	// Attempt to delete the credential
+	result, err := initialiazers.CredentialCollection.DeleteOne(context.TODO(), bson.M{"_id": objectID})
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to delete record",
+			"error": "Failed to delete record: " + err.Error(),
+		})
+		return
+	}
+
+	// If no documents were deleted
+	if result.DeletedCount == 0 {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "Record not found",
 		})
 		return
 	}
@@ -238,18 +278,29 @@ func DeleteCredentialByID(c *gin.Context) {
 // @Router       /credentials/{id} [get]
 func GetCredentialByID(c *gin.Context) {
 	// Get the ID from the URL parameter
-	id := c.Param("id")
+	idParam := c.Param("id")
 
-	// Check if the credential exists
+	// Convert string ID to MongoDB ObjectID
+	objectID, err := primitive.ObjectIDFromHex(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid ID format",
+		})
+		return
+	}
+
+	// Find the credential in MongoDB
 	var credential models.Credential
-	if err := initialiazers.DB.First(&credential, id).Error; err != nil {
+	err = initialiazers.CredentialCollection.FindOne(context.TODO(), bson.M{"_id": objectID}).Decode(&credential)
+	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Record not found",
 		})
 		return
 	}
-	c.JSON(http.StatusOK, credential)
 
+	// Return the found credential
+	c.JSON(http.StatusOK, credential)
 }
 
 // GetPasswordDecryptByID godoc
@@ -268,53 +319,47 @@ func GetCredentialByID(c *gin.Context) {
 // @Failure      500         {object}  models.ErrorResponse "Failed to decrypt password"
 // @Router       /credentials/decrypt/{id} [post]
 func GetPasswordDecryptByID(c *gin.Context) {
-	// Get the ID from the URL parameter
-	id := c.Param("id")
+	idParam := c.Param("id")
 
-	// Find the credential by ID
-	var credential models.Credential
-	if err := initialiazers.DB.First(&credential, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Record not found",
-		})
+	objectID, err := primitive.ObjectIDFromHex(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
 		return
 	}
 
-	// Get the password to decode from request body
+	// Crear contexto con timeout de 10 segundos
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	var credential models.Credential
+	err = initialiazers.CredentialCollection.FindOne(ctx, bson.M{"_id": objectID}).Decode(&credential)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Record not found"})
+		return
+	}
+
 	var body struct {
 		MasterKey string `json:"master_key" binding:"required"`
 	}
 	if err := c.BindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Masterkey is required to decrypt",
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "MasterKey is required to decrypt"})
 		return
 	}
 
-	// Compare hashed password with provided one
-	err := bcrypt.CompareHashAndPassword([]byte(credential.MasterKey), []byte(body.MasterKey))
+	err = bcrypt.CompareHashAndPassword([]byte(credential.MasterKey), []byte(body.MasterKey))
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error": "Invalid decryption password",
-		})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid decryption password"})
 		return
 	}
 
-	// Decrypt password using the provided key
 	decryptedPassword, err := utils.DecryptAES(credential.Secret, body.MasterKey)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to decrypt password",
-		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decrypt password"})
 		return
 	}
 
-	// Return the decrypted password
-	c.JSON(http.StatusOK, gin.H{
-		"decrypted_password": decryptedPassword,
-	})
+	c.JSON(http.StatusOK, gin.H{"decrypted_password": decryptedPassword})
 }
-
 
 // GetEmailByID godoc
 // @Summary      Get email by credential ID
@@ -325,19 +370,52 @@ func GetPasswordDecryptByID(c *gin.Context) {
 // @Success      200  {object}  models.EmailResponse
 // @Failure      404  {object}  models.ErrorResponse
 // @Router       /credentials/email/{id} [get]
-
 func GetEmailByID(c *gin.Context) {
-	// Get the ID from the URL parameter
-	id := c.Param("id")
+	idParam := c.Param("id")
 
-	// Check if the credential exists
-	var credential models.Credential
-	if err := initialiazers.DB.First(&credential, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Record not found",
-		})
+	objectID, err := primitive.ObjectIDFromHex(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
 		return
 	}
-	c.JSON(http.StatusOK, credential.Email)
 
+	var credential models.Credential
+
+	err = initialiazers.CredentialCollection.FindOne(context.TODO(), bson.M{"_id": objectID}).Decode(&credential)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Record not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"email": credential.Email})
 }
+
+// func GetEmailByID(c *gin.Context) {
+// 	// Get the ID from the URL parameter
+// 	idParam := c.Param("id")
+
+// 	// Convert string to ObjectID
+// 	objectID, err := primitive.ObjectIDFromHex(idParam)
+// 	if err != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+// 		return
+// 	}
+
+// 	// Use projection to get only email field
+// 	projection := options.FindOne().SetProjection(bson.M{"email": 1})
+
+// 	var result struct {
+// 		Email string `bson:"email" json:"email"`
+// 	}
+
+// 	err = initialiazers.CredentialCollection.
+// 		FindOne(context.TODO(), bson.M{"_id": objectID}, projection).
+// 		Decode(&result)
+
+// 	if err != nil {
+// 		c.JSON(http.StatusNotFound, gin.H{"error": "Record not found"})
+// 		return
+// 	}
+
+// 	c.JSON(http.StatusOK, gin.H{"email": result.Email})
+// }

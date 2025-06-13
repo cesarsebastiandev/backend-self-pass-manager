@@ -1,16 +1,9 @@
-version: '3.8'
-
-volumes:
-  volMysql:
 services:
-  dbMysql:
-    image: mysql:8.4
-    container_name: self-pass-manager-mysql
-    restart: always
+  mongo:
+    image: mongo:latest  
+    restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MONGO_INITDB_ROOT_USERNAME: root 
+      MONGO_INITDB_ROOT_PASSWORD: password
     ports:
-      - 3305:3306
-    volumes:
-      - volMysql:/var/lib/mysql
+      - "27017:27017"  
