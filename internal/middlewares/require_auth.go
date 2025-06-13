@@ -1,12 +1,16 @@
 package middlewares
 
 import (
+	"context"
 	"fmt"
-	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/initialiazers"
-	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/models"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/initialiazers"
+	"github.com/cesarsebastiandev/backend-self-pass-manager/internal/models"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/golang-jwt/jwt/v5"
 
@@ -16,61 +20,62 @@ import (
 func RequireAuth(c *gin.Context) {
 	fmt.Println("In middleware")
 
-	//Get the cookie off request
+	// Get the cookie off request
 	tokenString, err := c.Cookie("token")
-
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Token not found in cookies"})
 		return
 	}
 
-	//Decode/validate it
-
-	// Parse takes the token string and a function for looking up the key. The latter is especially
+	// Decode/validate it
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		// Don't forget to validate the alg is what you expect:
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-
 		// hmacSampleSecret is a []byte containing your secret, e.g. []byte("my_secret_key")
 		return []byte(os.Getenv("SECRET")), nil
 	})
-
-	// if err != nil {
-	// 	c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or missing token"})
-	// 	return
-	// }
 
 	if err != nil || !token.Valid {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or missing token"})
 		return
 	}
 
-	
-
+	// Extract claims
 	if claims, ok := token.Claims.(jwt.MapClaims); ok {
-		//Check the expiration
+		// Check the expiration
 		if float64(time.Now().Unix()) > claims["exp"].(float64) {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error":"Token expired"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Token expired"})
+			return
 		}
 
-		//Find the user with token  sub
+		// Find the user with the token "sub" claim
+		userIDHex, ok := claims["sub"].(string)
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID format in token"})
+			return
+		}
+
+		userID, err := primitive.ObjectIDFromHex(userIDHex)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid ObjectID"})
+			return
+		}
+
 		var user models.User
-		initialiazers.DB.First(&user, claims["sub"])
-
-		if user.ID == 0 {
+		err = initialiazers.UserCollection.FindOne(context.TODO(), bson.M{"_id": userID}).Decode(&user)
+		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+			return
 		}
 
-		//Attach to request
+		// Attach user to request context
 		c.Set("user", user)
 
-		//Continue
+		// Continue to next handler
 		c.Next()
 	} else {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error":"Something went wrong, try again..."})
-
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Something went wrong, try again..."})
 	}
-
 }
