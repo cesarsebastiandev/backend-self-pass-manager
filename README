@@ -1,10 +1,62 @@
-//When the main.go file is in the core
-CompileDaemon -command="./backend-self-pass-manager/cmd"
+# Self Pass Manager🚀
 
-//When the main.go file is in the cmd folder
-CompileDaemon -build="go build -o backend-self-pass-manager ./cmd" -command="./backend-self-pass-manager"
+[![Go](https://img.shields.io/badge/Go-1.24.2-blue.svg)](https://golang.org/)
+[![Gin](https://img.shields.io/badge/Gin_Framework-1.10-green.svg)](https://github.com/gin-gonic/gin)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+---
 
-//This package helps to documenting my restapi
-go install github.com/swaggo/swag/cmd/swag@latest
-"github.com/swaggo/files"
-"github.com/swaggo/gin-swagger"
+## Elige tu idioma | Choose your language:
+
+- [Español](#español)
+- [English](#english)
+
+---
+
+## Español
+
+### Índice
+
+1. [Descripción General](#descripción-general-)
+2. [Características Principales](#características-principales-)
+6. [Licencia](#licencia)
+
+### Descripción General 🌟
+<!-- Esta API RESTful, desarrollada con Go (Golang) utilizando el framework Gin, forma parte de una aplicación fullstack para la gestión de contraseñas personales. Permite a los usuarios registrarse, iniciar sesión y almacenar de forma segura credenciales en una base de datos.
+
+Cuenta con soporte para múltiples motores de base de datos: MySQL, PostgreSQL y MongoDB, gestionados mediante ramas independientes en el repositorio. -->
+Este proyecto es una RESTful API desarrollada con Go (Golang) y el framework Gin, diseñada para servir como backend de una aplicación de gestión de contraseñas personales.
+
+Permite a los usuarios registrar cuentas, iniciar sesión y almacenar de forma segura credenciales cifradas en una base de datos. Las contraseñas se encriptan utilizando claves derivadas de una MasterKey única por registro, proporcionando un enfoque robusto y seguro para el almacenamiento de datos sensibles.
+
+### Características Principales 🔑
+- Registro e inicio de sesión de usuarios con autenticación JWT.
+- Almacenamiento seguro de contraseñas cifradas.
+- Cada registro tiene una MasterKey única: solo quien conoce esa clave puede desencriptar la contraseña.
+- Derivación de claves desde la MasterKey para cifrado AES.
+- Validación segura de claves con hash bcrypt.
+- Enfoque similar a sistemas "Zero Knowledge": el servidor no puede acceder a las contraseñas reales.
+- Soporte para 3 bases de datos distintas, mediante ramas separadas:
+    - `mysql`
+    - `postgres`
+    - `mongodb`
+
+
+### Tecnologías utilizadas ⚙️
+
+- Golang + Gin – Framework web liviano y rápido
+- JWT – Autenticación basada en tokens
+- Cookies HttpOnly – Seguridad adicional en sesiones
+- bcrypt – Hash seguro para validar MasterKey
+- AES – Cifrado simétrico para contraseñas
+- MySQL / PostgreSQL / MongoDB – Soporte para múltiples motores de base de datos
+- GORM – ORM para bases de datos relacionales
+
+
+---
+## English
+
+### Index
+
+1. [Overview](#overview-)
+2. [Key Features](#key-features-)
+6. [License](#license)

@@ -1,0 +1,10 @@
+//When the main.go file is in the core
+CompileDaemon -command="./backend-self-pass-manager/cmd"
+
+//When the main.go file is in the cmd folder
+CompileDaemon -build="go build -o backend-self-pass-manager ./cmd" -command="./backend-self-pass-manager"
+
+//This package helps to documenting my restapi
+go install github.com/swaggo/swag/cmd/swag@latest
+"github.com/swaggo/files"
+"github.com/swaggo/gin-swagger"
