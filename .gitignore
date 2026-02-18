@@ -1,1 +1,24 @@
+# Binaries
+/bin/
+/build/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Output of go build
+*.out
+
+# Environment files
 .env
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
