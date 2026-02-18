@@ -1,5 +1,16 @@
 .PHONY: run swagger docker-build docker-up docker-up-detached docker-down docker-stop
 
+# Compile Go backend for Windows, Linux and MacOS (64-bit) producing a standalone .exe
+build-win:
+	GOOS=windows GOARCH=amd64 go build -o dist/self-pass-manager.exe ./cmd
+
+build-linux:
+	GOOS=linux GOARCH=amd64 go build -o self-pass-manager ./cmd
+
+build-mac:
+	GOOS=darwin GOARCH=amd64 go build -o self-pass-manager ./cmd
+
+
 # Run the Go application with live reload using CompileDaemon
 # Suitable for local development to see changes instantly
 run:
@@ -9,25 +20,3 @@ run:
 swagger:
 	swag init --generalInfo cmd/main.go --output docs
 
-# Build and start Docker containers (forces rebuild)
-# Use when you want to rebuild images, typically before deployment
-docker-build:
-	docker-compose up --build
-
-# Start Docker containers in the foreground (logs shown in terminal)
-# Recommended for local development to monitor container output
-docker-up:
-	docker-compose up
-
-# Start Docker containers in detached mode (run in background)
-# Recommended for production or staging environments
-docker-up-detached:
-	docker-compose up -d
-
-# Stop and remove Docker containers, networks, and volumes
-docker-down:
-	docker-compose down
-
-# Stop Docker containers without removing them (containers can be restarted later)
-docker-stop:
-	docker-compose stop

@@ -1,4 +1,5 @@
 # Binaries
+self-pass-manager
 /bin/
 /build/
 *.exe

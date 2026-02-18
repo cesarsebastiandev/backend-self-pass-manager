@@ -13,7 +13,9 @@ var DB *gorm.DB
 func ConnectToDb() {
 	dsn := os.Getenv("DB")
 	if dsn == "" {
-		log.Fatal("DB environment variable not set")
+		dsn = "database.db"
+	} else {
+		log.Printf("Using database from environment variable: %s", dsn)
 	}
 
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
