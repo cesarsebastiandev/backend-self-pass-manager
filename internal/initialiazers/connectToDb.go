@@ -1,23 +1,26 @@
 package initialiazers
 
 import (
-	"fmt"
+	"log"
 	"os"
 
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
 var DB *gorm.DB
 
 func ConnectToDb() {
-	var err error
 	dsn := os.Getenv("DB")
-	DB, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
-
-	if err != nil {
-		panic("Failed to connect DB")
-	} else {
-		fmt.Println("Connected to DB")
+	if dsn == "" {
+		log.Fatal("DB environment variable not set")
 	}
+
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
+	if err != nil {
+		log.Fatal("Failed to connect to database:", err)
+	}
+
+	DB = db
+	log.Println("Connected to SQLite DB")
 }
