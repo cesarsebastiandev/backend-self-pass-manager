@@ -15,3 +15,7 @@ type DecryptResponse struct {
 type EmailResponse struct {
 	Email string `json:"email"`
 }
+
+type UsernameResponse struct {
+	Username string `json:"username"`
+}

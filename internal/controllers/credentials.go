@@ -59,6 +59,7 @@ func AddCredentials(c *gin.Context) {
 		Platform:    body.Platform,
 		Description: body.Description,
 		Email:       body.Email,
+		Username:    body.Username,
 		Secret:      encryptedSecret,
 		MasterKey:   string(hash),
 	}
@@ -136,7 +137,7 @@ func UpdateCredentialByID(c *gin.Context) {
 	}
 
 	// Bind the new data from the request body
-	var body validations.CredentialRequest
+	var body validations.UpdateCredentialRequest
 	if err := c.Bind(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid input: " + err.Error(),
@@ -145,18 +146,21 @@ func UpdateCredentialByID(c *gin.Context) {
 	}
 
 	// Update fields if present
-	if body.Platform != "" {
-		credential.Platform = body.Platform
+	if body.Platform != nil {
+		credential.Platform = *body.Platform
 	}
-	if body.Description != "" {
-		credential.Description = body.Description
+	if body.Description != nil {
+		credential.Description = *body.Description
 	}
-	if body.Email != "" {
-		credential.Email = body.Email
+	if body.Email != nil {
+		credential.Email = *body.Email
 	}
-	if body.Secret != "" {
-		key := utils.DeriveKeyFromPassword(body.Secret)
-		encryptedPassword, err := utils.EncryptAES(body.Secret, key)
+	if body.Username != nil {
+		credential.Username = body.Username
+	}
+	if body.Secret != nil {
+		key := utils.DeriveKeyFromPassword(*body.Secret)
+		encryptedPassword, err := utils.EncryptAES(*body.Secret, key)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Failed to encrypt password",
@@ -165,8 +169,8 @@ func UpdateCredentialByID(c *gin.Context) {
 		}
 		credential.Secret = encryptedPassword
 	}
-	if body.MasterKey != "" {
-		hash, err := bcrypt.GenerateFromPassword([]byte(body.MasterKey), 10)
+	if body.MasterKey != nil {
+		hash, err := bcrypt.GenerateFromPassword([]byte(*body.MasterKey), 10)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Failed to hash password to decode",
@@ -325,7 +329,6 @@ func GetPasswordDecryptByID(c *gin.Context) {
 // @Success      200  {object}  models.EmailResponse
 // @Failure      404  {object}  models.ErrorResponse
 // @Router       /credentials/email/{id} [get]
-
 func GetEmailByID(c *gin.Context) {
 	// Get the ID from the URL parameter
 	id := c.Param("id")
@@ -339,5 +342,30 @@ func GetEmailByID(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, credential.Email)
+
+}
+
+// GetUsernameByID godoc
+// @Summary      Get username by credential ID
+// @Description  Retrieves the username associated with a credential by its ID
+// @Tags         Credentials
+// @Produce      json
+// @Param        id   path      int  true  "Credential ID"
+// @Success      200  {object}  models.UsernameResponse
+// @Failure      404  {object}  models.ErrorResponse
+// @Router       /credentials/username/{id} [get]
+func GetUsernameByID(c *gin.Context) {
+	// Get the ID from the URL parameter
+	id := c.Param("id")
+
+	// Check if the credential exists
+	var credential models.Credential
+	if err := initialiazers.DB.First(&credential, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "Record not found",
+		})
+		return
+	}
+	c.JSON(http.StatusOK, credential.Username)
 
 }

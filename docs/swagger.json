@@ -126,6 +126,76 @@
                 }
             }
         },
+        "/credentials/email/{id}": {
+            "get": {
+                "description": "Retrieves the email associated with a credential by its ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Credentials"
+                ],
+                "summary": "Get email by credential ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Credential ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.EmailResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/credentials/username/{id}": {
+            "get": {
+                "description": "Retrieves the username associated with a credential by its ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Credentials"
+                ],
+                "summary": "Get username by credential ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Credential ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.UsernameResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/credentials/{id}": {
             "get": {
                 "description": "Retrieves a single credential record by its ID",
@@ -423,6 +493,9 @@
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "username": {
+                    "type": "string"
                 }
             }
         },
@@ -430,6 +503,14 @@
             "type": "object",
             "properties": {
                 "decrypted_password": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.EmailResponse": {
+            "type": "object",
+            "properties": {
+                "email": {
                     "type": "string"
                 }
             }
@@ -454,6 +535,14 @@
             "type": "object",
             "properties": {
                 "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.UsernameResponse": {
+            "type": "object",
+            "properties": {
+                "username": {
                     "type": "string"
                 }
             }
@@ -491,6 +580,11 @@
                     "type": "string",
                     "maxLength": 100,
                     "minLength": 8
+                },
+                "username": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 2
                 }
             }
         },

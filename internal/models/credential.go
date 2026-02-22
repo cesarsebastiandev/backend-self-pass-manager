@@ -22,6 +22,7 @@ type Credential struct {
 	Platform    string `json:"platform" gorm:"not null"`
 	Description string `json:"description" gorm:"not null"`
 	Email       string `json:"email"`
+	Username *string `json:"username,omitempty"`
 	Secret      string `json:"-"`
 	MasterKey   string `json:"-"`
 }

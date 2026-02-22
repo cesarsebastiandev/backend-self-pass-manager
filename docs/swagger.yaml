@@ -16,10 +16,17 @@ definitions:
         type: string
       updated_at:
         type: string
+      username:
+        type: string
     type: object
   models.DecryptResponse:
     properties:
       decrypted_password:
+        type: string
+    type: object
+  models.EmailResponse:
+    properties:
+      email:
         type: string
     type: object
   models.ErrorResponse:
@@ -35,6 +42,11 @@ definitions:
   models.MessageResponse:
     properties:
       message:
+        type: string
+    type: object
+  models.UsernameResponse:
+    properties:
+      username:
         type: string
     type: object
   validations.CredentialRequest:
@@ -57,6 +69,10 @@ definitions:
       secret:
         maxLength: 100
         minLength: 8
+        type: string
+      username:
+        maxLength: 100
+        minLength: 2
         type: string
     required:
     - description
@@ -269,6 +285,52 @@ paths:
           description: Failed to decrypt password
           schema:
             $ref: '#/definitions/models.ErrorResponse'
+  /credentials/email/{id}:
+    get:
+      description: Retrieves the email associated with a credential by its ID
+      parameters:
+      - description: Credential ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.EmailResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get email by credential ID
+      tags:
+      - Credentials
+  /credentials/username/{id}:
+    get:
+      description: Retrieves the username associated with a credential by its ID
+      parameters:
+      - description: Credential ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.UsernameResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get username by credential ID
+      tags:
+      - Credentials
   /login:
     post:
       consumes:

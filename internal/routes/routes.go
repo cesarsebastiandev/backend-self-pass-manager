@@ -30,6 +30,7 @@ func SetupAllRoutes(r *gin.Engine) {
 		api.DELETE("/credentials/:id", middlewares.RequireAuth, controllers.DeleteCredentialByID)
 		api.POST("/credentials/decrypt/:id", middlewares.RequireAuth, controllers.GetPasswordDecryptByID)
 		api.GET("/credentials/email/:id", middlewares.RequireAuth, controllers.GetEmailByID)
+		api.GET("/credentials/username/:id", middlewares.RequireAuth, controllers.GetUsernameByID)
 
 	}
 
