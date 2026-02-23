@@ -11,6 +11,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 
 	"github.com/gin-gonic/gin"
+	"strings"
 )
 
 func init() {
@@ -53,10 +54,24 @@ func main() {
 
 	// Serve Swagger UI at /swagger for interactive API documentation
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	// --- Static files ---
+	r.Static("/browser", "./internal/static/browser") // JS, CSS, chunks, favicon
+	r.Static("/assets", "./internal/static/assets")   // imágenes
+
+	// --- SPA fallback ---
+	r.NoRoute(func(c *gin.Context) {
+		if strings.HasPrefix(c.Request.URL.Path, "/api") {
+			c.JSON(404, gin.H{"error": "Not found"})
+			return
+		}
+		// All other requests serve the Angular index.html file
+		c.File("./internal/static/browser/index.html")
+	})
+
 	err := r.Run()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	r.Run() // listen and serve on 0.0.0.0:3000
 }
